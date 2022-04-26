@@ -52,11 +52,34 @@ from pprint import pprint
 import bs4
 from bs4 import BeautifulSoup
 import requests
-import pandas as pd
+from peewee import *
+import os
 from datetime import datetime
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+db_path = os.path.join(BASE_DIR, "weather.sqlite")
+db = SqliteDatabase(db_path)
+cwd = os.getcwd()
+print("Current working directory:", cwd)
+c = db.cursor()
+c.execute('pragma encoding')
+
+
+class WeatherBase(Model):
+    sky = CharField(column_name='Погода')
+    temperature = CharField(column_name='Температура')
+    date = CharField(column_name='Дата')
+
+    class Meta:
+        table_name = 'Weather'
+        database = db
+
+
+WeatherBase.create_table()
+
+proxy_link = {'https': '195.158.3.198:3128'}  ###Argentina 170.155.5.235:8080
 url = 'https://weather.com/ru-RU/weather/tenday/l/c811fe9cc55daf06ea556004a0e9d096035e4627903ea902da1650bc856a3b79#detailIndex5'
-page = requests.get(url)
+page = requests.get(url=url, proxies=proxy_link)
 # print(page)
 soup = BeautifulSoup(page.text, 'html.parser')
 # print(soup.prettify())
@@ -71,7 +94,7 @@ for temp in forecast_14d_temp:
     else:
         list_temp.append(temp.text)
 
-forecast_14d_days = soup.find_all('h2', class_='DetailsSummary--daypartName--2FBp2')
+forecast_14d_days = soup.find_all('h3', class_='DetailsSummary--daypartName--2FBp2')
 actual_data = soup.find('span', class_='DailyContent--daypartDate--2A3Wi')
 k = 0
 list_days = []
@@ -82,9 +105,28 @@ for days in forecast_14d_days:
     else:
         list_days.append(days.text)
 
+forecast_14d_sky_status = soup.find_all('span', class_='DetailsSummary--extendedData--365A_')
+actual_sky_status = soup.find('p', class_='DailyContent--narrative--hplRl')
+k = 0
+list_sky_status = []
+for sky_status in forecast_14d_sky_status:
+    if k == 0:
+        k += 1
+        continue
+    else:
+        list_sky_status.append(sky_status.text)
+
+# print(list_days, list_temp, list_sky_status)
 dict_forecast = {}
-dict_forecast.setdefault(actual_data.text, actual_temp.text)
-list_forecast = zip(list_days, list_temp)
-for days, temp in list_forecast:
-    dict_forecast.setdefault(days, temp)
-pprint(dict_forecast)
+dict_main = {}
+for i in range(0, 14):
+    dict_forecast = {"Погода": list_sky_status[i], "Температура": list_temp[i], "Дата": list_days[i]}
+    weather = WeatherBase(sky=list_sky_status[i], temperature=list_temp[i], date=list_days[i])
+    weather.save()
+    print(dict_forecast)
+
+# dict_forecast.setdefault(actual_data.text, actual_temp.text)
+# list_forecast = zip(list_days, list_temp)
+# for days, temp in list_forecast:
+#     dict_forecast.setdefault(days, temp)
+# pprint(dict_forecast)
