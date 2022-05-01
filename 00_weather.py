@@ -77,53 +77,73 @@ class WeatherBase(Model):
 
 WeatherBase.create_table()
 
-proxy_link = {'https': '195.158.3.198:3128'}  ###Argentina 170.155.5.235:8080
-url = 'https://weather.com/ru-RU/weather/tenday/l/c811fe9cc55daf06ea556004a0e9d096035e4627903ea902da1650bc856a3b79#detailIndex5'
-page = requests.get(url=url, proxies=proxy_link)
-# print(page)
-soup = BeautifulSoup(page.text, 'html.parser')
-# print(soup.prettify())
-forecast_14d_temp = soup.find_all('span', class_='DetailsSummary--highTempValue--3Oteu')
-actual_temp = soup.find('span', class_='DailyContent--temp--3d4dn')
-k = 0
-list_temp = []
-for temp in forecast_14d_temp:
-    if k == 0:
-        k += 1
-        continue
-    else:
-        list_temp.append(temp.text)
 
-forecast_14d_days = soup.find_all('h3', class_='DetailsSummary--daypartName--2FBp2')
-actual_data = soup.find('span', class_='DailyContent--daypartDate--2A3Wi')
-k = 0
-list_days = []
-for days in forecast_14d_days:
-    if k == 0:
-        k += 1
-        continue
-    else:
-        list_days.append(days.text)
+class WeatherMaker:
+    def __init__(self):
+        pass
 
-forecast_14d_sky_status = soup.find_all('span', class_='DetailsSummary--extendedData--365A_')
-actual_sky_status = soup.find('p', class_='DailyContent--narrative--hplRl')
-k = 0
-list_sky_status = []
-for sky_status in forecast_14d_sky_status:
-    if k == 0:
-        k += 1
-        continue
-    else:
-        list_sky_status.append(sky_status.text)
+    def data_parser():
+        proxy_link = {'https': '195.158.3.198:3128'}  ###Argentina 170.155.5.235:8080
+        url = 'https://weather.com/ru-RU/weather/tenday/l/c811fe9cc55daf06ea556004a0e9d096035e4627903ea902da1650bc856a3b79#detailIndex5'
+        page = requests.get(url=url, proxies=proxy_link)
+        # print(page)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        # print(soup.prettify())
+        forecast_14d_temp = soup.find_all('span', class_='DetailsSummary--highTempValue--3Oteu')
+        actual_temp = soup.find('span', class_='DailyContent--temp--3d4dn')
+        k = 0
+        list_temp = []
+        for temp in forecast_14d_temp:
+            if k == 0:
+                k += 1
+                continue
+            else:
+                list_temp.append(temp.text)
 
-# print(list_days, list_temp, list_sky_status)
-dict_forecast = {}
-dict_main = {}
-for i in range(0, 14):
-    dict_forecast = {"Погода": list_sky_status[i], "Температура": list_temp[i], "Дата": list_days[i]}
-    weather = WeatherBase(sky=list_sky_status[i], temperature=list_temp[i], date=list_days[i])
-    weather.save()
-    print(dict_forecast)
+        forecast_14d_days = soup.find_all('h3', class_='DetailsSummary--daypartName--2FBp2')
+        actual_data = soup.find('span', class_='DailyContent--daypartDate--2A3Wi')
+        k = 0
+        list_days = []
+        for days in forecast_14d_days:
+            if k == 0:
+                k += 1
+                continue
+            else:
+                list_days.append(days.text)
+
+        forecast_14d_sky_status = soup.find_all('span', class_='DetailsSummary--extendedData--365A_')
+        actual_sky_status = soup.find('p', class_='DailyContent--narrative--hplRl')
+        k = 0
+        list_sky_status = []
+        for sky_status in forecast_14d_sky_status:
+            if k == 0:
+                k += 1
+                continue
+            else:
+                list_sky_status.append(sky_status.text)
+
+        dict_main = {}
+        for i in range(0, 14):
+            dict_forecast = {
+                f"День{[i + 1]}": {"Погода": list_sky_status[i], "Температура": list_temp[i], "Дата": list_days[i]}}
+            dict_main.update(dict_forecast)
+        # pprint(dict_main)
+        return dict_main
+
+
+class DatabaseUpdater:
+    def __init__(self):
+        pass
+
+    def vase_updater():
+        dict_load = WeatherMaker.data_parser()
+        for value in dict_load.values():
+            weather = WeatherBase(sky=value.setdefault("Погода"), temperature=value.setdefault("Температура"),
+                                  date=value.setdefault("Дата"))
+            weather.save()
+
+
+DatabaseUpdater.vase_updater()
 
 # dict_forecast.setdefault(actual_data.text, actual_temp.text)
 # list_forecast = zip(list_days, list_temp)
