@@ -50,6 +50,7 @@ import itertools
 import sqlite3
 from pprint import pprint
 
+import peewee
 import urllib3
 from urllib3.exceptions import NewConnectionError
 from builtins import ConnectionRefusedError
@@ -69,7 +70,6 @@ db = SqliteDatabase('weather.sqlite')
 # print("Current working directory:", cwd)
 # c = db.cursor()
 # c.execute('pragma encoding')
-
 
 
 class WeatherBase(Model):
@@ -158,13 +158,20 @@ class DatabaseUpdater:
         dict_load = WeatherMaker.data_parser()
         weather = WeatherBase
         for value in dict_load.values():
-    # weather = WeatherBase(sky=value.setdefault("Погода"), temperature=value.setdefault("Температура"),
-    #                       date=value.setdefault("Дата"))
-            weather = WeatherBase.get_or_create(sky=value.setdefault("Погода"),
-                                 temperature=value.setdefault("Температура"), date=value.setdefault("Дата"))
-    #         weather = WeatherBase(sky=value.setdefault("Погода"), temperature=value.setdefault("Температура"),
-    #                       date=value.setdefault("Дата"))
-    #         weather.save()
+            # weather = WeatherBase(sky=value.setdefault("Погода"), temperature=value.setdefault("Температура"),
+            #                       date=value.setdefault("Дата"))
+            try:
+                weather = WeatherBase.update(sky=value.setdefault("Погода"),
+                                             temperature=value.setdefault("Температура"),
+                                             date=value.setdefault("Дата")).where(
+                    value.setdefault("Дата") == weather.date)
+                weather = WeatherBase(sky=value.setdefault("Погода"), temperature=value.setdefault("Температура"),
+                                      date=value.setdefault("Дата"))
+                weather.save()
+            except sqlite3.IntegrityError:
+                continue
+            except peewee.IntegrityError:
+                continue
 
 
 DatabaseUpdater.base_updater()
