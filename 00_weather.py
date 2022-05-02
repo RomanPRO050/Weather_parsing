@@ -47,28 +47,35 @@
 # Инициализировать её через DatabaseProxy()
 # https://peewee.readthedocs.io/en/latest/peewee/database.html#dynamically-defining-a-database
 import itertools
+import sqlite3
 from pprint import pprint
+
+import urllib3
+from urllib3.exceptions import NewConnectionError
+from builtins import ConnectionRefusedError
 
 import bs4
 from bs4 import BeautifulSoup
 import requests
 from peewee import *
 import os
-from datetime import datetime
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-db_path = os.path.join(BASE_DIR, "weather.sqlite")
-db = SqliteDatabase(db_path)
-cwd = os.getcwd()
-print("Current working directory:", cwd)
-c = db.cursor()
-c.execute('pragma encoding')
+# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# db_path = os.path.join(BASE_DIR, "weather.sqlite")
+db = SqliteDatabase('weather.sqlite')
+
+
+# cwd = os.getcwd()
+# print("Current working directory:", cwd)
+# c = db.cursor()
+# c.execute('pragma encoding')
+
 
 
 class WeatherBase(Model):
     sky = CharField(column_name='Погода')
     temperature = CharField(column_name='Температура')
-    date = CharField(column_name='Дата')
+    date = CharField(column_name='Дата', unique=True)
 
     class Meta:
         table_name = 'Weather'
@@ -83,9 +90,7 @@ class WeatherMaker:
         pass
 
     def data_parser():
-        proxy_link = {'https': '195.158.3.198:3128'}  ###Argentina 170.155.5.235:8080
-        url = 'https://weather.com/ru-RU/weather/tenday/l/c811fe9cc55daf06ea556004a0e9d096035e4627903ea902da1650bc856a3b79#detailIndex5'
-        page = requests.get(url=url, proxies=proxy_link)
+        page = WeatherMaker.Connection()
         # print(page)
         soup = BeautifulSoup(page.text, 'html.parser')
         # print(soup.prettify())
@@ -130,23 +135,36 @@ class WeatherMaker:
         # pprint(dict_main)
         return dict_main
 
+    def Connection():
+        global page
+        try:
+            proxy_link = {'https': '195.158.3.198:3128'}  ###Argentina 170.155.5.235:8080
+            url = 'https://weather.com/ru-RU/weather/tenday/l/c811fe9cc55daf06ea556004a0e9d096035e4627903ea902da1650bc856a3b79#detailIndex5'
+            page = requests.get(url=url, proxies=proxy_link)
+        except ConnectionRefusedError:
+            WeatherMaker.Connection()
+        except urllib3.exceptions.NewConnectionError:
+            WeatherMaker.Connection()
+        except requests.exceptions.ProxyError:
+            WeatherMaker.Connection()
+        return page
+
 
 class DatabaseUpdater:
     def __init__(self):
         pass
 
-    def vase_updater():
+    def base_updater():
         dict_load = WeatherMaker.data_parser()
+        weather = WeatherBase
         for value in dict_load.values():
-            weather = WeatherBase(sky=value.setdefault("Погода"), temperature=value.setdefault("Температура"),
-                                  date=value.setdefault("Дата"))
-            weather.save()
+    # weather = WeatherBase(sky=value.setdefault("Погода"), temperature=value.setdefault("Температура"),
+    #                       date=value.setdefault("Дата"))
+            weather = WeatherBase.get_or_create(sky=value.setdefault("Погода"),
+                                 temperature=value.setdefault("Температура"), date=value.setdefault("Дата"))
+    #         weather = WeatherBase(sky=value.setdefault("Погода"), temperature=value.setdefault("Температура"),
+    #                       date=value.setdefault("Дата"))
+    #         weather.save()
 
 
-DatabaseUpdater.vase_updater()
-
-# dict_forecast.setdefault(actual_data.text, actual_temp.text)
-# list_forecast = zip(list_days, list_temp)
-# for days, temp in list_forecast:
-#     dict_forecast.setdefault(days, temp)
-# pprint(dict_forecast)
+DatabaseUpdater.base_updater()
