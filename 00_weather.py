@@ -46,30 +46,17 @@
 # Приконнектится по полученному url-пути к базе данных
 # Инициализировать её через DatabaseProxy()
 # https://peewee.readthedocs.io/en/latest/peewee/database.html#dynamically-defining-a-database
-import itertools
 import sqlite3
-from pprint import pprint
-
+import CGI_server
 import peewee
 import urllib3
-from urllib3.exceptions import NewConnectionError
 from builtins import ConnectionRefusedError
-
-import bs4
 from bs4 import BeautifulSoup
 import requests
 from peewee import *
-import os
 
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# db_path = os.path.join(BASE_DIR, "weather.sqlite")
+
 db = SqliteDatabase('weather.sqlite')
-
-
-# cwd = os.getcwd()
-# print("Current working directory:", cwd)
-# c = db.cursor()
-# c.execute('pragma encoding')
 
 
 class WeatherBase(Model):
@@ -158,8 +145,6 @@ class DatabaseUpdater:
         dict_load = WeatherMaker.data_parser()
         weather = WeatherBase
         for value in dict_load.values():
-            # weather = WeatherBase(sky=value.setdefault("Погода"), temperature=value.setdefault("Температура"),
-            #                       date=value.setdefault("Дата"))
             try:
                 weather = WeatherBase.update(sky=value.setdefault("Погода"),
                                              temperature=value.setdefault("Температура"),
@@ -175,3 +160,4 @@ class DatabaseUpdater:
 
 
 DatabaseUpdater.base_updater()
+CGI_server.server()
