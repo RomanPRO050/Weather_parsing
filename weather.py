@@ -55,7 +55,6 @@ from bs4 import BeautifulSoup
 import requests
 from peewee import *
 
-
 db = SqliteDatabase('weather.sqlite')
 
 
@@ -154,10 +153,14 @@ class DatabaseUpdater:
                                       date=value.setdefault("Дата"))
                 weather.save()
             except sqlite3.IntegrityError:
-                continue
+                weather.date = value.setdefault("Дата")
+                weather.sky = value.setdefault("Погода")
+                weather.temperature = value.setdefault("Температура")
             except peewee.IntegrityError:
-                continue
+                weather.date = value.setdefault("Дата")
+                weather.sky = value.setdefault("Погода")
+                weather.temperature = value.setdefault("Температура")
 
 
 DatabaseUpdater.base_updater()
-CGI_server.server()
+

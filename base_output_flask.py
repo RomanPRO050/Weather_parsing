@@ -3,7 +3,10 @@ import pathlib
 from pathlib import Path
 from peewee import *
 from flask import Flask
+import weather
+
 app = Flask(__name__)
+
 
 @app.route("/")
 def base_output():
@@ -24,6 +27,7 @@ def base_output():
     return f'{overall}'
 
 
+weather.DatabaseUpdater.base_updater()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=4567)
